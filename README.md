@@ -1,33 +1,45 @@
 # mavericks-docker
 
-Build a modern Docker CLI from source so it runs on Mac OS X 10.9.5 (Mavericks).
+Docker CLI for Mac OS X 10.9 Mavericks.
 
-The build is CMake-only, in one of two modes — the target is always Mavericks; only the
-build mode differs. Each mode uses its own build dir, so a synced source tree never
-clobbers itself:
+Run dependencies:
+- VMware Fusion 8
 
-- **native** — building on Mavericks 10.9 itself (system clang).
-- **cross** — building for Mavericks on a modern macOS host (fetches a pinned 10.9 SDK).
+## Building
 
-## Quickstart
+Build dependencies:
+- Go 1.26 for the CLI tools
+- Docker for the Linux image
 
-On Mavericks:
-
+For the 
 ```sh
-cmake --preset native
-cmake --build --preset native
-ctest --preset native
+cmake --workflow --preset cross    # or "native" if on Mavericks
+cmake --workflow --preset iso
 ```
 
-On a modern macOS host (cross-build for 10.9):
+## When Renovate bumps boot2docker
 
 ```sh
-cmake --preset cross
-cmake --build --preset cross
-ctest --preset cross
+# 1. Bless the new upstream release asset (this hash approves the new target,
+#    so eyeball the release first: right repo, right tag, plausible size).
+REF=$(sed -n 's/^REF=//p' components/boot2docker/version)
+curl -fsSLo /tmp/boot2docker.iso \
+  "https://github.com/dragonflylee/boot2docker/releases/download/$REF/boot2docker.iso"
+shasum -a 256 /tmp/boot2docker.iso | awk '{print $1}' > components/boot2docker/golden.sha256
+
+# 2. Rebuild the ISO from source (needs a Docker daemon) and re-baseline the
+#    fingerprint from it.
+cmake --workflow --preset iso    # gates still fail here; the build is what matters
+sh cmake/iso_fingerprint.sh emit build-iso/boot2docker/boot2docker.iso \
+  cmake/characterization/boot2docker
+
+# 3. Review before committing: kernel/label/engine should move to exactly the
+#    announced new versions, and nothing else.
+git diff components/boot2docker cmake/characterization/boot2docker
+
+# 4. Confirm the gates pass, then commit both dirs to the Renovate branch.
+ctest --preset iso
 ```
 
-The Docker CLI lands at `build-<mode>/docker-cli/docker`. `ctest` runs the three
-fail-closed gates (compat_guard, sdk_coverage, characterize) plus the unit suite. The
-large docker/cli source checkout is cached once in `.srccache/` and reused across build
-dirs and hosts.
+Major bumps: also check `components/boot2docker/patches/` — upstream may have
+made a patch redundant (the build fails loudly if one stops applying).
