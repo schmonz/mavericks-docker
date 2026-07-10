@@ -15,9 +15,15 @@ emit() {  # <iso> <out-dir>
     | sort -u | head -1 > "$out/kernel" || true
   [ -s "$out/kernel" ] || mvd_die "no kernel token in $iso"
   # PVD volume identifier: 32 bytes at absolute offset 32808 (sector 16 + 40).
-  dd if="$iso" bs=1 skip=32808 count=32 2>/dev/null | tr -d '\0' | sed 's/ *$//' \
-    > "$out/label" || mvd_die "dd label $iso"
-  [ -s "$out/label" ] || mvd_die "no volume label in $iso"
+  # Capture then printf a single trailing newline: BSD sed appends a newline to
+  # unterminated input while GNU sed preserves its absence, so writing sed's output
+  # straight to the file made the emitted `label` platform-dependent (the Mac-emitted
+  # reference had a trailing newline the Linux re-emit lacked -> spurious DIVERGENCE).
+  # $() strips trailing newlines; printf re-adds exactly one, matching kernel/engine
+  # (which get theirs from `head`) and the committed reference on every platform.
+  label=$(dd if="$iso" bs=1 skip=32808 count=32 2>/dev/null | tr -d '\0' | sed 's/ *$//')
+  [ -n "$label" ] || mvd_die "no volume label in $iso"
+  printf '%s\n' "$label" > "$out/label"
   strings "$iso" 2>/dev/null | grep -oE 'b2d-v[0-9]+\.[0-9]+\.[0-9]+' \
     | sort -u | head -1 > "$out/engine" || true
   [ -s "$out/engine" ] || mvd_die "no engine label in $iso"
