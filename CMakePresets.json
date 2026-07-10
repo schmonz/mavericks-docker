@@ -13,15 +13,23 @@
       "displayName": "cross — build for Mavericks 10.9 on a modern host",
       "binaryDir": "${sourceDir}/build-cross",
       "cacheVariables": { "MVD_EXPECTED_MODE": "cross" }
+    },
+    {
+      "name": "iso",
+      "displayName": "iso — build boot2docker.iso via Docker (box or linux)",
+      "binaryDir": "${sourceDir}/build-iso",
+      "cacheVariables": { "MVD_EXPECTED_MODE": "iso" }
     }
   ],
   "buildPresets": [
     { "name": "native", "configurePreset": "native" },
-    { "name": "cross", "configurePreset": "cross" }
+    { "name": "cross", "configurePreset": "cross" },
+    { "name": "iso", "configurePreset": "iso" }
   ],
   "testPresets": [
     { "name": "native", "configurePreset": "native", "output": { "outputOnFailure": true } },
-    { "name": "cross", "configurePreset": "cross", "output": { "outputOnFailure": true } }
+    { "name": "cross", "configurePreset": "cross", "output": { "outputOnFailure": true } },
+    { "name": "iso", "configurePreset": "iso", "output": { "outputOnFailure": true } }
   ],
   "workflowPresets": [
     {
@@ -38,6 +46,14 @@
         { "type": "configure", "name": "cross" },
         { "type": "build", "name": "cross" },
         { "type": "test", "name": "cross" }
+      ]
+    },
+    {
+      "name": "iso",
+      "steps": [
+        { "type": "configure", "name": "iso" },
+        { "type": "build", "name": "iso" },
+        { "type": "test", "name": "iso" }
       ]
     }
   ]

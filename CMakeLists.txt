@@ -8,15 +8,19 @@ project(mavericks_docker VERSION ${MVD_VERSION} LANGUAGES NONE)
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
 set(CMAKE_OSX_ARCHITECTURES x86_64)
 
-# Build-mode detection at configure time: "native" = compiling ON Mavericks 10.9
-# (pkgsrc go126 present), "cross" = a modern host cross-compiling for 10.9. The build
-# TARGET is always Mavericks; only the mode differs.
-set(MVD_MODE "cross")
-if(EXISTS "/opt/pkg/go126/bin/go")
-  execute_process(COMMAND sw_vers -productVersion
-    OUTPUT_VARIABLE _osv OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-  if(_osv MATCHES "^10\\.9\\.")
-    set(MVD_MODE "native")
+# Build-mode detection at configure time. "iso" = Docker-driven boot2docker.iso build
+# (its own preset; no Go/SDK, no native/cross). Otherwise: "native" = compiling ON
+# Mavericks 10.9 (pkgsrc go126 present), "cross" = a modern host cross-compiling for 10.9.
+if(MVD_EXPECTED_MODE STREQUAL "iso")
+  set(MVD_MODE "iso")
+else()
+  set(MVD_MODE "cross")
+  if(EXISTS "/opt/pkg/go126/bin/go")
+    execute_process(COMMAND sw_vers -productVersion
+      OUTPUT_VARIABLE _osv OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    if(_osv MATCHES "^10\\.9\\.")
+      set(MVD_MODE "native")
+    endif()
   endif()
 endif()
 message(STATUS "mavericks-docker ${MVD_VERSION} — build: ${MVD_MODE}")
@@ -35,34 +39,36 @@ if(NOT MVD_EXPECTED_MODE STREQUAL MVD_MODE)
     "does a '${MVD_MODE}' build — wrong preset for this host.")
 endif()
 
-# Pinned 10.9 SDK. native -> system SDK; cross -> fetch it.
-set(MVD_MACOSX_10_9_SDK "" CACHE PATH "MacOSX10.9 SDK root (cross build)")
-if(MVD_MODE STREQUAL "cross" AND NOT MVD_MACOSX_10_9_SDK)
-  execute_process(COMMAND sh "${CMAKE_CURRENT_SOURCE_DIR}/cmake/fetch_10_9_sdk.sh"
-    OUTPUT_VARIABLE _sdk OUTPUT_STRIP_TRAILING_WHITESPACE RESULT_VARIABLE _sdkrc)
-  if(NOT _sdkrc EQUAL 0)
-    message(FATAL_ERROR "fetch_10_9_sdk.sh failed")
+if(NOT MVD_MODE STREQUAL "iso")
+  # Pinned 10.9 SDK. native -> system SDK; cross -> fetch it.
+  set(MVD_MACOSX_10_9_SDK "" CACHE PATH "MacOSX10.9 SDK root (cross build)")
+  if(MVD_MODE STREQUAL "cross" AND NOT MVD_MACOSX_10_9_SDK)
+    execute_process(COMMAND sh "${CMAKE_CURRENT_SOURCE_DIR}/cmake/fetch_10_9_sdk.sh"
+      OUTPUT_VARIABLE _sdk OUTPUT_STRIP_TRAILING_WHITESPACE RESULT_VARIABLE _sdkrc)
+    if(NOT _sdkrc EQUAL 0)
+      message(FATAL_ERROR "fetch_10_9_sdk.sh failed")
+    endif()
+    set(MVD_MACOSX_10_9_SDK "${_sdk}" CACHE PATH "" FORCE)
   endif()
-  set(MVD_MACOSX_10_9_SDK "${_sdk}" CACHE PATH "" FORCE)
-endif()
 
-# Per-mode toolchain + flags (mirrors the old build.sh host branches exactly).
-if(MVD_MODE STREQUAL "native")
-  set(MVD_GO  "/opt/pkg/go126/bin/go")
-  # System clang (no pkgsrc gcc dependency). Requires go126 built with the cgoclang
-  # SUBST (lang/go126/Makefile) so runtime/cgo compiles under the 2014 system clang.
-  set(MVD_CC  "/usr/bin/clang")
-  set(MVD_LS_ARCHS  "")
-  set(MVD_LS_CFLAGS "")
-  set(MVD_DC_ARCH   "")
-  set(MVD_DC_SDK    "")
-else()
-  set(MVD_GO  "go")
-  set(MVD_CC  "clang")
-  set(MVD_LS_ARCHS  "x86_64")
-  set(MVD_LS_CFLAGS "-isysroot ${MVD_MACOSX_10_9_SDK} -mmacosx-version-min=10.9")
-  set(MVD_DC_ARCH   "-arch x86_64")
-  set(MVD_DC_SDK    "-isysroot ${MVD_MACOSX_10_9_SDK}")
+  # Per-mode toolchain + flags (mirrors the old build.sh host branches exactly).
+  if(MVD_MODE STREQUAL "native")
+    set(MVD_GO  "/opt/pkg/go126/bin/go")
+    # System clang (no pkgsrc gcc dependency). Requires go126 built with the cgoclang
+    # SUBST (lang/go126/Makefile) so runtime/cgo compiles under the 2014 system clang.
+    set(MVD_CC  "/usr/bin/clang")
+    set(MVD_LS_ARCHS  "")
+    set(MVD_LS_CFLAGS "")
+    set(MVD_DC_ARCH   "")
+    set(MVD_DC_SDK    "")
+  else()
+    set(MVD_GO  "go")
+    set(MVD_CC  "clang")
+    set(MVD_LS_ARCHS  "x86_64")
+    set(MVD_LS_CFLAGS "-isysroot ${MVD_MACOSX_10_9_SDK} -mmacosx-version-min=10.9")
+    set(MVD_DC_ARCH   "-arch x86_64")
+    set(MVD_DC_SDK    "-isysroot ${MVD_MACOSX_10_9_SDK}")
+  endif()
 endif()
 
 # Read a component's REPO/REF pin from components/<name>/version.
@@ -82,6 +88,53 @@ endfunction()
 include(ExternalProject)
 enable_testing()
 
+# --- iso mode: Docker-driven boot2docker.iso. No Go/SDK; requires a Docker daemon. ---
+set(MVD_SRC_CACHE "${CMAKE_SOURCE_DIR}/.srccache" CACHE PATH
+    "Shared cache dir for pinned dependency source clones")
+if(MVD_MODE STREQUAL "iso")
+  execute_process(COMMAND docker version
+    RESULT_VARIABLE _dv OUTPUT_QUIET ERROR_QUIET)
+  if(NOT _dv EQUAL 0)
+    message(FATAL_ERROR "iso mode needs a reachable Docker daemon (`docker version` failed)")
+  endif()
+
+  mvd_read_pin("${CMAKE_SOURCE_DIR}/components/boot2docker" B2D_REPO B2D_REF)
+  set(B2D_SRC "${MVD_SRC_CACHE}/boot2docker-${B2D_REF}")
+  set(B2D_OUT "${CMAKE_BINARY_DIR}/boot2docker")
+  set(B2D_ISO "${B2D_OUT}/boot2docker.iso")
+  ExternalProject_Add(boot2docker
+    SOURCE_DIR       "${B2D_SRC}"
+    DOWNLOAD_COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/clone_pinned.sh"
+                       "${B2D_REPO}" "${B2D_REF}" "${B2D_SRC}"
+    UPDATE_COMMAND   ""
+    CONFIGURE_COMMAND ""
+    BUILD_IN_SOURCE  TRUE
+    BUILD_COMMAND    sh "${CMAKE_SOURCE_DIR}/cmake/build_boot2docker.sh"
+                       <SOURCE_DIR> "${B2D_OUT}" "${B2D_REF}"
+    INSTALL_COMMAND  ""
+    BUILD_BYPRODUCTS "${B2D_ISO}"
+  )
+
+  # Gates.
+  add_test(NAME iso_fetch_verify
+    COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/iso_fetch_verify.sh"
+               "${CMAKE_SOURCE_DIR}/components/boot2docker")
+  add_test(NAME iso_fingerprint
+    COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/iso_fingerprint.sh" compare
+               "${CMAKE_SOURCE_DIR}/cmake/characterization/boot2docker" "${B2D_ISO}")
+  add_test(NAME iso_boot_proof
+    COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/iso_boot_proof.sh" "${B2D_ISO}")
+  set_tests_properties(iso_boot_proof PROPERTIES SKIP_RETURN_CODE 77)
+
+  # Self-contained unit tests for the iso scripts.
+  foreach(t boot2docker_pin_test boot2docker_build_script_test iso_fingerprint_test
+            iso_fetch_verify_test iso_boot_proof_test boot2docker_ci_test)
+    add_test(NAME ${t} COMMAND sh "${CMAKE_SOURCE_DIR}/tests/${t}.sh")
+  endforeach()
+
+  return()  # iso mode defines nothing from the Mac pipeline below
+endif()
+
 # --- component builds, gates, and unit tests ---
 mvd_read_pin("${CMAKE_SOURCE_DIR}/components/legacy-support" LS_REPO LS_REF)
 set(LS_OUT "${CMAKE_BINARY_DIR}/legacy-support")
@@ -99,11 +152,6 @@ ExternalProject_Add(legacy_support
   BUILD_BYPRODUCTS "${LS_A}"
 )
 
-# Shared, mode/host-independent cache for the (large) docker/cli source clone: fetched
-# once, reused across build dirs and hosts instead of re-cloned per build. Ref-pinned
-# path, so a version bump clones afresh. Override with -DMVD_SRC_CACHE=... if desired.
-set(MVD_SRC_CACHE "${CMAKE_SOURCE_DIR}/.srccache" CACHE PATH
-    "Shared cache dir for pinned dependency source clones")
 mvd_read_pin("${CMAKE_SOURCE_DIR}/components/docker-cli" DC_REPO DC_REF)
 set(DC_OUT     "${CMAKE_BINARY_DIR}/docker-cli")
 set(DOCKER_BIN "${DC_OUT}/docker")
