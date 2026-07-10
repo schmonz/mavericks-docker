@@ -1,0 +1,32 @@
+name: boot2docker
+
+# Build boot2docker.iso from the pinned dragonflylee source, the SAME cmake iso build the
+# box runs locally, on Linux/x86_64. Auto-runs on PRs (incl. Renovate bumps) as a gate:
+# fetch-verify + fingerprint. The boot-proof needs VMware and auto-skips here (SKIP_RETURN_CODE
+# 77) until a self-hosted box runner exists.
+on:
+  pull_request:
+    paths:
+      - 'components/boot2docker/**'
+      - 'cmake/build_boot2docker.sh'
+      - 'cmake/iso_*.sh'
+      - 'cmake/characterization/boot2docker/**'
+      - '.github/workflows/boot2docker.yml'
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest   # native x86_64 Docker; separate from the macos-26 Mac build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build + gate (same cmake iso build the box runs)
+        run: |
+          cmake --preset iso
+          cmake --build --preset iso
+          ctest --preset iso --output-on-failure
+      - uses: actions/upload-artifact@v4
+        with:
+          name: boot2docker-iso
+          path: build-iso/boot2docker/boot2docker.iso
