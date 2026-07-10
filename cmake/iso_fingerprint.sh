@@ -42,7 +42,25 @@ case "${1:-}" in
            if diff -ru "$ref" "$tmp" > "$tmp.diff" 2>&1; then
              echo "EQUIVALENT: $iso matches reference $ref"
            else
-             echo "DIVERGENCE: $iso differs from reference $ref" >&2; cat "$tmp.diff" >&2; exit 1
+             echo "DIVERGENCE: $iso differs from reference $ref" >&2; cat "$tmp.diff" >&2
+             # Self-explain: every fact is version-bearing and emit fails closed
+             # on malformed ones, so a mismatch here is version-bump-shaped.
+             {
+               echo ""
+               echo "What changed (reference -> this ISO):"
+               for f in kernel label engine; do
+                 cmp -s "$ref/$f" "$tmp/$f" \
+                   || echo "  $f: $(cat "$ref/$f") -> $(cat "$tmp/$f")"
+               done
+               echo ""
+               echo "If the boot2docker pin moved on purpose (e.g. a Renovate bump), the"
+               echo "rebuilt ISO is telling the truth and the committed reference is stale."
+               echo "Check the new values match the announced upstream release, then:"
+               echo "  sh cmake/iso_fingerprint.sh emit <iso> cmake/characterization/boot2docker"
+               echo "and commit it together with the updated components/boot2docker/golden.sha256"
+               echo "(full flow: README, 'When Renovate bumps boot2docker')."
+             } >&2
+             exit 1
            fi ;;
   *) echo "usage: $0 emit|compare ..." >&2; exit 64 ;;
 esac

@@ -25,7 +25,14 @@ sh "$FP" compare "$tmp/ref" "$iso" || { echo "expected EQUIVALENT" >&2; exit 1; 
 # mutate kernel token -> DIVERGENCE (nonzero)
 iso2="$tmp/fake2.iso"; cp "$iso" "$iso2"
 printf '5.15.999-boot2docker' | dd of="$iso2" bs=1 seek=36000 conv=notrunc 2>/dev/null
-if sh "$FP" compare "$tmp/ref" "$iso2" >/dev/null 2>&1; then
+if out=$(sh "$FP" compare "$tmp/ref" "$iso2" 2>&1); then
   echo "expected DIVERGENCE on mutated kernel" >&2; exit 1
 fi
+# divergence self-explains: per-fact old -> new, and the re-baseline flow
+echo "$out" | grep -q 'kernel: 5.15.112-boot2docker -> 5.15.999-boot2docker' \
+  || { echo "divergence missing old -> new summary" >&2; exit 1; }
+echo "$out" | grep -q 'iso_fingerprint.sh emit' \
+  || { echo "divergence missing re-baseline command" >&2; exit 1; }
+echo "$out" | grep -q 'golden.sha256' \
+  || { echo "divergence missing golden.sha256 reminder" >&2; exit 1; }
 echo "iso_fingerprint_test: OK"
