@@ -9,5 +9,6 @@
       "datasourceTemplate": "git-refs",
       "versioningTemplate": "semver"
     }
-  ]
+  ],
+  "automerge": true
 }
