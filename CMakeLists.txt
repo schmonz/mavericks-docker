@@ -123,6 +123,29 @@ ExternalProject_Add(docker_cli
   BUILD_BYPRODUCTS "${DOCKER_BIN}"
 )
 
+# docker-machine (GOPATH/dep era: no go.mod, vendored). Cloned into a GOPATH-shaped path
+# so GO111MODULE=off can build it; the shim is injected via -extldflags (its only cgo is
+# stdlib). Same go/CC/mode flags as docker-cli, so native + cross both work.
+mvd_read_pin("${CMAKE_SOURCE_DIR}/components/docker-machine" DM_REPO DM_REF)
+set(DM_GOPATH   "${MVD_SRC_CACHE}/docker-machine-${DM_REF}")
+set(DM_SRC      "${DM_GOPATH}/src/github.com/docker/machine")
+set(DM_OUT      "${CMAKE_BINARY_DIR}/docker-machine")
+set(MACHINE_BIN "${DM_OUT}/docker-machine")
+ExternalProject_Add(docker_machine
+  DEPENDS          legacy_support
+  SOURCE_DIR       "${DM_SRC}"
+  DOWNLOAD_COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/clone_pinned.sh"
+                     "${DM_REPO}" "${DM_REF}" "${DM_SRC}"
+  UPDATE_COMMAND   ""
+  BUILD_IN_SOURCE  TRUE
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND    sh "${CMAKE_SOURCE_DIR}/cmake/build_docker_machine.sh"
+                     <SOURCE_DIR> "${DM_OUT}" "${MVD_GO}" "${MVD_CC}"
+                     "${MVD_DC_ARCH}" "${MVD_DC_SDK}" "${LS_A}" "${DM_GOPATH}"
+  INSTALL_COMMAND  ""
+  BUILD_BYPRODUCTS "${MACHINE_BIN}"
+)
+
 # Fail-closed build-artifact gates (run after `cmake --build`).
 add_test(NAME compat_guard
   COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/compat_guard.sh" "${DOCKER_BIN}")
@@ -134,6 +157,12 @@ add_test(NAME characterize
 # characterize reads the binary's gomod via `go version -m`; use the SAME go that
 # built it (MVD_GO), not whatever `go` is on PATH.
 set_tests_properties(characterize PROPERTIES ENVIRONMENT "GO=${MVD_GO}")
+
+# docker-machine through the same 10.9-safety gates.
+add_test(NAME compat_guard_machine
+  COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/compat_guard.sh" "${MACHINE_BIN}")
+add_test(NAME sdk_coverage_machine
+  COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/sdk_coverage.sh" "${MACHINE_BIN}")
 
 # Unit tests (script behavior + output invariants). Output-asserting ones take the
 # built artifact path; self-contained ones run from the source tree.
