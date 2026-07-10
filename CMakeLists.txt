@@ -146,6 +146,27 @@ ExternalProject_Add(docker_machine
   BUILD_BYPRODUCTS "${MACHINE_BIN}"
 )
 
+# docker-compose (Compose v2; a go.mod module, not vendored). Simpler than docker-machine:
+# a normal module build (deps from the shared module cache), shim via -extldflags.
+mvd_read_pin("${CMAKE_SOURCE_DIR}/components/docker-compose" CO_REPO CO_REF)
+set(CO_SRC      "${MVD_SRC_CACHE}/docker-compose-${CO_REF}")
+set(CO_OUT      "${CMAKE_BINARY_DIR}/docker-compose")
+set(COMPOSE_BIN "${CO_OUT}/docker-compose")
+ExternalProject_Add(docker_compose
+  DEPENDS          legacy_support
+  SOURCE_DIR       "${CO_SRC}"
+  DOWNLOAD_COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/clone_pinned.sh"
+                     "${CO_REPO}" "${CO_REF}" "${CO_SRC}"
+  UPDATE_COMMAND   ""
+  BUILD_IN_SOURCE  TRUE
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND    sh "${CMAKE_SOURCE_DIR}/cmake/build_docker_compose.sh"
+                     <SOURCE_DIR> "${CO_OUT}" "${MVD_GO}" "${MVD_CC}"
+                     "${MVD_DC_ARCH}" "${MVD_DC_SDK}" "${LS_A}" "${CO_REF}"
+  INSTALL_COMMAND  ""
+  BUILD_BYPRODUCTS "${COMPOSE_BIN}"
+)
+
 # Fail-closed build-artifact gates (run after `cmake --build`).
 add_test(NAME compat_guard
   COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/compat_guard.sh" "${DOCKER_BIN}")
@@ -163,6 +184,11 @@ add_test(NAME compat_guard_machine
   COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/compat_guard.sh" "${MACHINE_BIN}")
 add_test(NAME sdk_coverage_machine
   COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/sdk_coverage.sh" "${MACHINE_BIN}")
+# docker-compose through the same 10.9-safety gates.
+add_test(NAME compat_guard_compose
+  COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/compat_guard.sh" "${COMPOSE_BIN}")
+add_test(NAME sdk_coverage_compose
+  COMMAND sh "${CMAKE_SOURCE_DIR}/cmake/sdk_coverage.sh" "${COMPOSE_BIN}")
 
 # Unit tests (script behavior + output invariants). Output-asserting ones take the
 # built artifact path; self-contained ones run from the source tree.

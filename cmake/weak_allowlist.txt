@@ -6,3 +6,9 @@ _SecTrustCopyCertificateChain
 # the go126 patch-src_runtime_sys__darwin.go version-guards the call so it never
 # runs on 10.9; imported but never bound. Remove this line if that patch is dropped.
 _notify_is_valid_token
+# Fundamental libc symbols that ARE resolved at runtime on 10.9 (verified: the binary
+# launches and runs — memcpy is used pervasively, so a missing bind would fault at
+# once) but are absent from the pinned SDK's stub-dylib exports (the SDK ships them as
+# compiler builtins/inlines, not stub symbols). dynamic_lookup binds them from the
+# runtime libSystem. Surfaced by compose v2; docker-cli/machine don't emit the ref.
+_memcpy
