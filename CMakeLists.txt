@@ -256,7 +256,7 @@ add_test(NAME sdk_coverage_test
 add_test(NAME characterize_test
   COMMAND sh "${CMAKE_SOURCE_DIR}/tests/characterize_test.sh" "${DOCKER_BIN}")
 # Self-contained (no built binary needed).
-foreach(t fetch_sdk_test scaffold_test renovate_test)
+foreach(t fetch_sdk_test scaffold_test renovate_test docker_compose_test)
   add_test(NAME ${t} COMMAND sh "${CMAKE_SOURCE_DIR}/tests/${t}.sh")
 endforeach()
 set_tests_properties(characterize_test PROPERTIES ENVIRONMENT "GO=${MVD_GO}")

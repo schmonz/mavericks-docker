@@ -10,6 +10,8 @@ cd "$SRC"
 EXT="$LS_A -mmacosx-version-min=10.9 $ARCH_FLAGS $SDK_FLAGS -Wl,-undefined,dynamic_lookup"
 export CGO_ENABLED=1 CC GOARCH=amd64
 export CGO_CFLAGS="-mmacosx-version-min=10.9 $ARCH_FLAGS $SDK_FLAGS"
-"$GO" build -ldflags "-linkmode=external -extldflags \"$EXT\" -X github.com/docker/compose/v2/internal.Version=$REF" -o "$OUT/docker-compose" ./cmd
+# -X target must track the module's major-version suffix (v2 -> v5 -> ...).
+MOD=$(awk '/^module /{print $2; exit}' go.mod)
+"$GO" build -ldflags "-linkmode=external -extldflags \"$EXT\" -X $MOD/internal.Version=$REF" -o "$OUT/docker-compose" ./cmd
 [ -f "$OUT/docker-compose" ] || { echo "no docker-compose binary produced" >&2; exit 1; }
 echo "docker-compose: $OUT/docker-compose"
