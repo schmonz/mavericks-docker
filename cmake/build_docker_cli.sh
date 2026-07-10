@@ -19,7 +19,7 @@ ln -sf vendor.sum go.sum
 COMMIT=$(git rev-parse --short HEAD)
 export CGO_ENABLED=1 CC GOARCH=amd64
 export CGO_CFLAGS="-mmacosx-version-min=10.9 $ARCH_FLAGS $SDK_FLAGS"
-export CGO_LDFLAGS="$LS_A -lresolv -mmacosx-version-min=10.9 $ARCH_FLAGS $SDK_FLAGS -Wl,-undefined,dynamic_lookup"
+export CGO_LDFLAGS="$LS_A -mmacosx-version-min=10.9 $ARCH_FLAGS $SDK_FLAGS -Wl,-undefined,dynamic_lookup"
 "$GO" build -mod=vendor \
   -ldflags "-X github.com/docker/cli/cli/version.Version=$VER \
             -X github.com/docker/cli/cli/version.GitCommit=$COMMIT \

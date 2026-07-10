@@ -8,7 +8,7 @@ set -eu
 SRC=$1; OUT=$2; GO=$3; CC=$4; ARCH_FLAGS=$5; SDK_FLAGS=$6; LS_A=$7; GP=$8
 mkdir -p "$OUT"
 cd "$SRC"
-EXT="$LS_A -lresolv -mmacosx-version-min=10.9 $ARCH_FLAGS $SDK_FLAGS -Wl,-undefined,dynamic_lookup -Wl,-U,_SecTrustEvaluateWithError -Wl,-U,_SecTrustCopyCertificateChain"
+EXT="$LS_A -mmacosx-version-min=10.9 $ARCH_FLAGS $SDK_FLAGS -Wl,-undefined,dynamic_lookup"
 export GOPATH="$GP" GO111MODULE=off CGO_ENABLED=1 CC GOARCH=amd64
 export CGO_CFLAGS="-mmacosx-version-min=10.9 $ARCH_FLAGS $SDK_FLAGS"
 "$GO" build -ldflags "-linkmode=external -extldflags \"$EXT\"" -o "$OUT/docker-machine" ./cmd/docker-machine
