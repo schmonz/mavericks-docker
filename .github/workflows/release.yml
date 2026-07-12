@@ -14,11 +14,23 @@ on:
 permissions:
   contents: write
 
+env:
+  # Shared 10.9 build machinery (find_package(MavericksSharedCMake) in the non-iso path).
+  # Pinned by SHA for reproducible builds. Bump deliberately to pull shared-machinery changes.
+  MSC_REF: e5f7503d83fbfbfe19b41650de1bdb161e0b1d8d
+
 jobs:
   build-macos:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
+
+      - name: Install mavericks-shared-cmake (pinned)
+        run: |
+          git clone https://github.com/schmonz/mavericks-shared-cmake /tmp/msc
+          git -C /tmp/msc checkout --quiet "$MSC_REF"
+          cmake -S /tmp/msc -B /tmp/msc/build
+          cmake --install /tmp/msc/build --prefix "$HOME/.local"
 
       - name: Version = VERSION file (tag must match)
         id: ver
@@ -43,11 +55,11 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ github.workspace }}/.sdk-cache
-          key: macosx10.9-sdk-${{ hashFiles('CMakeLists.txt') }}
+          key: macosx10.9-sdk-${{ env.MSC_REF }}
 
       - name: Build + gate (the SAME cmake build the Tahoe dry run runs)
         env:
-          MVD_SDK_CACHE: ${{ github.workspace }}/.sdk-cache
+          MAVERICKS_SDK_CACHE: ${{ github.workspace }}/.sdk-cache
         run: |
           cmake --preset cross
           cmake --build --preset cross
