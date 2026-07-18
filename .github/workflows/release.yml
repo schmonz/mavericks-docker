@@ -8,7 +8,8 @@ name: release
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]        # regular build+gate on every main push (artifact, no publish)
+    tags: ['v*']            # tags additionally publish a release
   workflow_dispatch:        # manual runs produce an artifact, not a release
 
 permissions:
@@ -38,16 +39,29 @@ jobs:
           if [ "${GITHUB_REF_TYPE}" = tag ] && [ "${GITHUB_REF_NAME}" != "v$VER" ]; then
             echo "::error::tag ${GITHUB_REF_NAME} != v$VER (VERSION file)"; exit 1; fi
 
-      # ⚠️ BLOCKED / PLACEHOLDER
-      # actions/setup-go installs STOCK Go, which produces a darwin/amd64 binary that
-      # dyld-faults on 10.9 (osinit_hack -> notify_is_valid_token). This step MUST become
-      # "pkg_add a pkgsrc bootstrap kit + the PATCHED go126 binary package", which is
-      # blocked on schmonz's Mavericks/TLS Go patches being upstreamed to pkgsrc and its
-      # binary repos rebuilding. Until then this workflow cannot produce a working release.
-      - name: Pin Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: '1.26.x'
+      # The 10.9-correct Go toolchain. Stock Go (actions/setup-go) produces a darwin/amd64
+      # binary that dyld-faults on 10.9 (osinit_hack -> notify_is_valid_token). schmonz/
+      # mavericks-golang's cross .pkg carries the Mavericks patches (osinit_hack version-guard
+      # + cgoclang + TLS backport), installs the cross GOROOT to /usr/local/mavericks-go/
+      # go126-cross, and cross-compiles darwin/amd64 min-10.9. We put its bin on PATH so the
+      # cmake cross build (MVD_GO="go") picks it up. Pinned by tag + sha256; bump deliberately.
+      - name: Install patched Go (mavericks-golang cross toolchain)
+        env:
+          GO_PKG_REF:    v1.26.4-mavericks.2  # schmonz/mavericks-golang release tag
+          GO_PKG_SHA256: cd7741b41587d6bec2ee0cbf368f3a75b51aae0e449d671fe6ec8a78717bb11c
+        run: |
+          ver="${GO_PKG_REF#v}"
+          pkg="mavericks-go126-cross-${ver}-darwin-arm64.pkg"
+          curl -fL --retry 3 -o "$pkg" \
+            "https://github.com/schmonz/mavericks-golang/releases/download/${GO_PKG_REF}/${pkg}"
+          echo "${GO_PKG_SHA256}  ${pkg}" | shasum -a 256 -c -
+          sudo installer -pkg "$pkg" -target /
+          echo "/usr/local/mavericks-go/go126-cross/bin" >> "$GITHUB_PATH"
+
+      - name: Confirm the patched cross toolchain is on PATH
+        run: |
+          test "$(command -v go)" = /usr/local/mavericks-go/go126-cross/bin/go
+          go version
 
       - name: Cache the MacOSX10.9 SDK
         uses: actions/cache@v6
