@@ -10,10 +10,22 @@ on:
   push:
     branches: [main]        # regular build+gate on every main push (artifact, no publish)
     tags: ['v*']            # tags additionally publish a release
+  pull_request:             # gate PRs (incl. Renovate bumps) on the same build+gate before merge
+    paths-ignore:           # skip only clearly-irrelevant PRs; anything else runs the gate (fail-safe)
+      - 'components/boot2docker/**'         # boot2docker builds on ubuntu (boot2docker.yml), not here
+      - '.github/workflows/boot2docker.yml'
+      - 'docs/**'
+      - 'README.md'
   workflow_dispatch:        # manual runs produce an artifact, not a release
 
 permissions:
   contents: write
+
+# Superseded runs cancel on the same ref: a PR's new commit cancels its prior run, and rapid main
+# merges cancel superseded main builds. Each tag is a unique ref, so a publish build is never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   # Shared 10.9 build machinery (find_package(MavericksSharedCMake) in the non-iso path).
