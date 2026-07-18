@@ -15,7 +15,16 @@ if(MVD_EXPECTED_MODE STREQUAL "iso")
   set(MVD_MODE "iso")
 else()
   set(MVD_MODE "cross")
-  if(EXISTS "/opt/pkg/go126/bin/go")
+  # Native 10.9 Go toolchain: pkgsrc (/opt/pkg/go126) or the mavericks-golang native .pkg
+  # (/usr/local/mavericks-go/go126). Prefer whichever is installed.
+  set(MVD_NATIVE_GO "")
+  foreach(_cand "/opt/pkg/go126/bin/go" "/usr/local/mavericks-go/go126/bin/go")
+    if(EXISTS "${_cand}")
+      set(MVD_NATIVE_GO "${_cand}")
+      break()
+    endif()
+  endforeach()
+  if(MVD_NATIVE_GO)
     execute_process(COMMAND sw_vers -productVersion
       OUTPUT_VARIABLE _osv OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
     if(_osv MATCHES "^10\\.9\\.")
@@ -58,9 +67,10 @@ if(NOT MVD_MODE STREQUAL "iso")
 
   # Per-mode toolchain + flags (mirrors the old build.sh host branches exactly).
   if(MVD_MODE STREQUAL "native")
-    set(MVD_GO  "/opt/pkg/go126/bin/go")
-    # System clang (no pkgsrc gcc dependency). Requires go126 built with the cgoclang
-    # SUBST (lang/go126/Makefile) so runtime/cgo compiles under the 2014 system clang.
+    set(MVD_GO  "${MVD_NATIVE_GO}")   # pkgsrc or mavericks-golang .pkg, detected above
+    # System clang (no pkgsrc gcc dependency). Requires a go126 built with the cgoclang fix
+    # (pkgsrc lang/go126 SUBST, or the mavericks-golang patch) so runtime/cgo compiles under
+    # the 2014 system clang.
     set(MVD_CC  "/usr/bin/clang")
     set(MVD_LS_ARCHS  "")
     set(MVD_LS_CFLAGS "")
