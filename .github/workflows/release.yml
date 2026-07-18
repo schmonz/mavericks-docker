@@ -25,12 +25,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install mavericks-shared-cmake (pinned)
-        run: |
-          git clone https://github.com/schmonz/mavericks-shared-cmake /tmp/msc
-          git -C /tmp/msc checkout --quiet "$MSC_REF"
-          cmake -S /tmp/msc -B /tmp/msc/build
-          cmake --install /tmp/msc/build --prefix "$HOME/.local"
+      # shared-cmake installs itself via its own action (HTTPS via the runner token). The @<sha> matches
+      # MSC_REF above (kept for the SDK cache key); consumed thereafter via find_package.
+      - name: Install mavericks-shared-cmake
+        uses: schmonz/mavericks-shared-cmake/.github/actions/install@8bc9fc38d40c40aaa5c95aefe21f29c64ce34d31  # mavericks-shared-cmake
 
       - name: Version = VERSION file (tag must match)
         id: ver
