@@ -1,0 +1,34 @@
+name: boot2docker
+
+# Build boot2docker.iso from the pinned dragonflylee source, the SAME cmake iso build the box runs
+# locally, on Linux/x86_64: fetch-verify + fingerprint. The boot-proof needs VMware and auto-skips here
+# (SKIP_RETURN_CODE 77) -- the real boot-proof + golden re-baseline happens on the box at release-approval
+# time. This is a SIGNAL, not a merge gate: it runs on push-to-main when boot2docker inputs change, so a
+# Renovate bump that leaves the golden stale shows red on main (fix / re-bless on the box). No PR gate --
+# a cloud gate can't boot-proof, so gating boot2docker bumps on it would wedge them forever. The release
+# .pkg's iso is built by release.yml's build-iso job, so no tag build here.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'components/boot2docker/**'
+      - 'cmake/build_boot2docker.sh'
+      - 'cmake/iso_*.sh'
+      - 'cmake/characterization/boot2docker/**'
+      - '.github/workflows/boot2docker.yml'
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest   # native x86_64 Docker; separate from the macos-26 Mac build
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build + gate (same cmake iso build the box runs)
+        run: |
+          cmake --preset iso
+          cmake --build --preset iso
+          ctest --preset iso --output-on-failure
+      - uses: actions/upload-artifact@v7
+        with:
+          name: boot2docker-iso
+          path: build-iso/boot2docker/boot2docker.iso
