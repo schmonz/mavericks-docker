@@ -164,7 +164,7 @@ jobs:
           VER=$(cat VERSION)
           mkdir -p in dist
           tar -C in -xzf dl/packaging-inputs.tgz      # restores executable bits
-          PKG="dist/mavericks-docker-$VER.pkg"
+          PKG="dist/docker-$VER.pkg"
 
           MSC_SCRIPTS="$SH" sh cmake/package_pkg.sh --out "$PKG" --version "$VER" \
             --docker in/docker --compose in/docker-compose --machine in/docker-machine \
