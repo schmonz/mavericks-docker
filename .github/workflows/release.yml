@@ -4,16 +4,11 @@ name: release
 # boot2docker.iso on Linux, build the Sparkle updater, assemble + sign the product .pkg, and attach
 # the .pkg + signed appcast to a GitHub Release on v* tags.
 #
-# RELEASE GATING mirrors mavericks-swift: CI proves the build succeeds and the gates pass, but a
-# modern runner is structurally blind to 10.9-only bugs, so every release publishes as a PRERELEASE.
-# Acceptance is a MANUAL real-10.9 boot-test (install the .pkg, boot the iso, run the updater); once
-# it passes you promote the GitHub prerelease to a full release, which is what /latest/ (and therefore
-# the Sparkle appcast feed) resolves to.
-#
-# No PR merge gate. Nothing reaches users until the manual box boot-test blesses a prerelease, so we
-# don't block merges -- the push-to-main build is a SIGNAL (a bump that breaks the build/gates shows red
-# on main, fix before cutting a prerelease), not a barrier. (Also: a cloud PR gate can't validate the
-# iso anyway -- that needs the box -- so gating boot2docker bumps on it would wedge them forever.)
+# Ships a FULL release on each v* tag -- no manual prerelease/promotion dance. CI proves the build +
+# gates pass; a modern runner can't boot-proof the iso, so the boot-proof auto-skips (ctest code 77)
+# and Sparkle surfaces any real-10.9 breakage. boot2docker updates flow the normal Renovate way: the
+# bump PR runs the CI-possible iso gates (fetch-verify + fingerprint; see boot2docker.yml) and
+# automerges if they pass -- a stale fingerprint golden fails that gate until it's re-baselined.
 
 on:
   push:
@@ -189,8 +184,7 @@ jobs:
             dist/appcast.xml
             dist/SHA256SUMS
 
-  # All-or-nothing publish: the ONLY writer to Releases, gated on package. Always a PRERELEASE --
-  # promote to a full release by hand after the manual real-10.9 boot-test.
+  # All-or-nothing publish: the ONLY writer to Releases, gated on package. Ships a full release.
   publish:
     if: github.ref_type == 'tag'
     needs: [package]
@@ -198,10 +192,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with: { path: dist, merge-multiple: true }
-      - name: Publish PRERELEASE (promote after the manual 10.9 boot-test)
+      - name: Publish release
         uses: softprops/action-gh-release@v3
         with:
-          prerelease: true
           files: |
             dist/*.pkg
             dist/appcast.xml

@@ -2,12 +2,19 @@ name: boot2docker
 
 # Build boot2docker.iso from the pinned dragonflylee source, the SAME cmake iso build the box runs
 # locally, on Linux/x86_64: fetch-verify + fingerprint. The boot-proof needs VMware and auto-skips here
-# (SKIP_RETURN_CODE 77) -- the real boot-proof + golden re-baseline happens on the box at release-approval
-# time. This is a SIGNAL, not a merge gate: it runs on push-to-main when boot2docker inputs change, so a
-# Renovate bump that leaves the golden stale shows red on main (fix / re-bless on the box). No PR gate --
-# a cloud gate can't boot-proof, so gating boot2docker bumps on it would wedge them forever. The release
-# .pkg's iso is built by release.yml's build-iso job, so no tag build here.
+# (SKIP_RETURN_CODE 77), so ctest passes on the CI-possible gates alone. This IS the merge gate for
+# boot2docker updates: it runs on the Renovate bump PR (and on push-to-main), so a bump that leaves the
+# fingerprint golden stale fails the PR and blocks automerge until the golden is re-baselined. The real
+# boot-proof + golden re-baseline still happen on the box out-of-band. The release .pkg's iso is built
+# by release.yml's build-iso job, so no tag build here.
 on:
+  pull_request:
+    paths:
+      - 'components/boot2docker/**'
+      - 'cmake/build_boot2docker.sh'
+      - 'cmake/iso_*.sh'
+      - 'cmake/characterization/boot2docker/**'
+      - '.github/workflows/boot2docker.yml'
   push:
     branches: [main]
     paths:
