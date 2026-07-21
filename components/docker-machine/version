@@ -1,0 +1,2 @@
+REPO=https://github.com/docker/machine.git
+REF=v0.16.2
