@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Original artwork for ModernMavericks/container-tools: a stack of intermodal containers,
+       flat-on. Recognisable from the repeating-but-irregular palette rather than from any 3-D
+       trickery, so it survives 16px. Generic industry metaphor: not a whale, not derived from
+       any vendor's mark, and clear of Docker blue. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E4A57"/>
+      <stop offset="1" stop-color="#16262E"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="196" ry="196" fill="url(#bg)"/>
+
+  <!-- One container: body, darker top and bottom rails, corrugation, door seam.
+       Rows are brick-offset and colours repeat in clusters, the way a real stack looks. -->
+  <g>
+    <!-- row 1: two wide, rust + amber -->
+    <g>
+      <rect x="96"  y="204" width="408" height="142" rx="16" fill="#C0442F"/>
+      <rect x="96"  y="204" width="408" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <rect x="96"  y="320" width="408" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <g fill="#000" opacity="0.14">
+        <rect x="150" y="242" width="12" height="66" rx="6"/><rect x="206" y="242" width="12" height="66" rx="6"/>
+        <rect x="262" y="242" width="12" height="66" rx="6"/><rect x="318" y="242" width="12" height="66" rx="6"/>
+        <rect x="374" y="242" width="12" height="66" rx="6"/><rect x="430" y="242" width="12" height="66" rx="6"/>
+      </g>
+      <rect x="520" y="204" width="408" height="142" rx="16" fill="#E8933A"/>
+      <rect x="520" y="204" width="408" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <rect x="520" y="320" width="408" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <g fill="#000" opacity="0.14">
+        <rect x="574" y="242" width="12" height="66" rx="6"/><rect x="630" y="242" width="12" height="66" rx="6"/>
+        <rect x="686" y="242" width="12" height="66" rx="6"/><rect x="742" y="242" width="12" height="66" rx="6"/>
+        <rect x="798" y="242" width="12" height="66" rx="6"/><rect x="854" y="242" width="12" height="66" rx="6"/>
+      </g>
+    </g>
+
+    <!-- row 2: three narrow, bone + sea + rust (offset seams) -->
+    <g>
+      <rect x="96"  y="362" width="266" height="142" rx="16" fill="#C9B597"/>
+      <rect x="96"  y="362" width="266" height="26"  rx="13" fill="#000" opacity="0.24"/>
+      <rect x="96"  y="478" width="266" height="26"  rx="13" fill="#000" opacity="0.24"/>
+      <g fill="#000" opacity="0.12">
+        <rect x="146" y="400" width="12" height="66" rx="6"/><rect x="202" y="400" width="12" height="66" rx="6"/>
+        <rect x="258" y="400" width="12" height="66" rx="6"/><rect x="314" y="400" width="12" height="66" rx="6"/>
+      </g>
+      <rect x="379" y="362" width="266" height="142" rx="16" fill="#2F8F6F"/>
+      <rect x="379" y="362" width="266" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <rect x="379" y="478" width="266" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <g fill="#000" opacity="0.14">
+        <rect x="429" y="400" width="12" height="66" rx="6"/><rect x="485" y="400" width="12" height="66" rx="6"/>
+        <rect x="541" y="400" width="12" height="66" rx="6"/><rect x="597" y="400" width="12" height="66" rx="6"/>
+      </g>
+      <rect x="662" y="362" width="266" height="142" rx="16" fill="#C0442F"/>
+      <rect x="662" y="362" width="266" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <rect x="662" y="478" width="266" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <g fill="#000" opacity="0.14">
+        <rect x="712" y="400" width="12" height="66" rx="6"/><rect x="768" y="400" width="12" height="66" rx="6"/>
+        <rect x="824" y="400" width="12" height="66" rx="6"/><rect x="880" y="400" width="12" height="66" rx="6"/>
+      </g>
+    </g>
+
+    <!-- row 3: two wide, sea + slate -->
+    <g>
+      <rect x="96"  y="520" width="408" height="142" rx="16" fill="#2F8F6F"/>
+      <rect x="96"  y="520" width="408" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <rect x="96"  y="636" width="408" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <g fill="#000" opacity="0.14">
+        <rect x="150" y="558" width="12" height="66" rx="6"/><rect x="206" y="558" width="12" height="66" rx="6"/>
+        <rect x="262" y="558" width="12" height="66" rx="6"/><rect x="318" y="558" width="12" height="66" rx="6"/>
+        <rect x="374" y="558" width="12" height="66" rx="6"/><rect x="430" y="558" width="12" height="66" rx="6"/>
+      </g>
+      <rect x="520" y="520" width="408" height="142" rx="16" fill="#4E7C99"/>
+      <rect x="520" y="520" width="408" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <rect x="520" y="636" width="408" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <g fill="#000" opacity="0.14">
+        <rect x="574" y="558" width="12" height="66" rx="6"/><rect x="630" y="558" width="12" height="66" rx="6"/>
+        <rect x="686" y="558" width="12" height="66" rx="6"/><rect x="742" y="558" width="12" height="66" rx="6"/>
+        <rect x="798" y="558" width="12" height="66" rx="6"/><rect x="854" y="558" width="12" height="66" rx="6"/>
+      </g>
+    </g>
+
+    <!-- row 4: amber, amber (a cluster), bone -->
+    <g>
+      <rect x="96"  y="678" width="266" height="142" rx="16" fill="#E8933A"/>
+      <rect x="96"  y="678" width="266" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <rect x="96"  y="794" width="266" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <g fill="#000" opacity="0.14">
+        <rect x="146" y="716" width="12" height="66" rx="6"/><rect x="202" y="716" width="12" height="66" rx="6"/>
+        <rect x="258" y="716" width="12" height="66" rx="6"/><rect x="314" y="716" width="12" height="66" rx="6"/>
+      </g>
+      <rect x="379" y="678" width="266" height="142" rx="16" fill="#E8933A"/>
+      <rect x="379" y="678" width="266" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <rect x="379" y="794" width="266" height="26"  rx="13" fill="#000" opacity="0.22"/>
+      <g fill="#000" opacity="0.14">
+        <rect x="429" y="716" width="12" height="66" rx="6"/><rect x="485" y="716" width="12" height="66" rx="6"/>
+        <rect x="541" y="716" width="12" height="66" rx="6"/><rect x="597" y="716" width="12" height="66" rx="6"/>
+      </g>
+      <rect x="662" y="678" width="266" height="142" rx="16" fill="#C9B597"/>
+      <rect x="662" y="678" width="266" height="26"  rx="13" fill="#000" opacity="0.24"/>
+      <rect x="662" y="794" width="266" height="26"  rx="13" fill="#000" opacity="0.24"/>
+      <g fill="#000" opacity="0.12">
+        <rect x="712" y="716" width="12" height="66" rx="6"/><rect x="768" y="716" width="12" height="66" rx="6"/>
+        <rect x="824" y="716" width="12" height="66" rx="6"/><rect x="880" y="716" width="12" height="66" rx="6"/>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,10 @@
+container-tools-updater.icns is original artwork made for this project: a stack of intermodal
+shipping containers, flat-on, in a small palette that repeats with clusters. It is not derived
+from any vendor's mark and carries no third-party licence or attribution requirement.
+
+Deliberately NOT a whale: Docker's "Moby Dock" and works imitating its design elements may not be
+reproduced without Docker, Inc.'s permission (docker.com/legal/trademark-guidelines). This project
+packages the upstream Docker CLI, Compose and Machine for OS X 10.9; "Docker" appears only as an
+adjective describing those tools, never as this product's identity.
+
+Source: updater/container-tools-updater.svg, rasterised with rsvg-convert and assembled with iconutil.
