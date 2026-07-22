@@ -7,11 +7,11 @@ package; the docker daemon itself runs inside a Linux VM.
 
 Installed layout
 ----------------
-  /usr/local/bin/docker            docker CLI
-  /usr/local/bin/docker-compose    Compose (also: `docker compose`)
-  /usr/local/bin/docker-machine    Machine (creates/controls the VM host)
-  /usr/local/bin/lazydocker        terminal UI for Docker
-  /usr/local/bin/docked            one-off-container convenience wrapper
+  /usr/local/bin/docker                                docker CLI
+  /usr/local/bin/docker-compose                        Compose (also: `docker compose`)
+  /usr/local/bin/docker-machine                        Machine (creates/controls the VM host)
+  /usr/local/bin/lazydocker                            terminal UI for Docker
+  /usr/local/bin/docked                                one-off-container convenience wrapper
   /usr/local/share/modernmavericks/container-tools/boot2docker.iso    the VM image
 
 The binaries are self-contained (legacy-support is linked in statically); there is
@@ -30,14 +30,27 @@ First-time setup
         printf '\neval "$(docker-machine env default)"\n' >> ~/.bash_profile; fi \
    && eval "$(docker-machine env default)"
 
+3. (Optional) Start the VM automatically at login, so you never run
+   `docker-machine start` by hand. A LaunchAgent ships with the package but is
+   turned OFF; enable it per-user with:
+
+   launchctl load -w /Library/LaunchAgents/dev.modernmavericks.container-tools-machine.plist
+
+   Turn it back off with:
+
+   launchctl unload -w /Library/LaunchAgents/dev.modernmavericks.container-tools-machine.plist
+
+   (It only starts an EXISTING 'default' host that isn't already running, so do
+   step 2 first. Your shell still needs the step-2 `eval` line to talk to the VM.)
+
 Everyday commands
 -----------------
-  docker-machine start | stop | restart | status | ip     control the VM host
-  docker build -t NAME DIR                                 build an image
-  docker run --rm -it IMAGE CMD                            run a container
-  docked IMAGE CMD                                         same, $PWD -> /work/
-  lazydocker                                               TUI dashboard
-  docker compose up                                        Compose
+  docker-machine start | stop | restart | status | ip    control the VM host
+  docker build -t NAME DIR                               build an image
+  docker run --rm -it IMAGE CMD                          run a container
+  docked IMAGE CMD                                       same, $PWD -> /work/
+  lazydocker                                             TUI dashboard
+  docker compose up                                      Compose
 
 Updating the VM image
 ---------------------

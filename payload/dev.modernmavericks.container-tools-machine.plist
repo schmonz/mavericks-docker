@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>dev.modernmavericks.container-tools-machine</string>
+
+  <!-- Ships off. Enable per-user with `launchctl load -w`, disable with `unload -w`. -->
+  <key>Disabled</key>
+  <true/>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/docker-machine-ensure-default</string>
+  </array>
+
+  <!-- Bring the VM up at login, then re-check every 60s (recovers after sleep/stop). -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StartInterval</key>
+  <integer>60</integer>
+</dict>
+</plist>
