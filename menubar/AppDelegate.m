@@ -1,6 +1,7 @@
 #import "AppDelegate.h"
 #import "MDController.h"
 #import "MDWatchers.h"
+#import "MDLoginItem.h"
 
 @interface AppDelegate ()
 @property (strong) NSStatusItem *statusItem;
@@ -13,6 +14,13 @@
 - (void)applicationDidFinishLaunching:(NSNotification *)note {
   self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength];
   self.controller = [[MDController alloc] init];
+
+  static NSString * const kSeeded = @"MDLoginItemSeeded";
+  if (![[NSUserDefaults standardUserDefaults] boolForKey:kSeeded]) {
+    [MDLoginItem setEnabled:YES];
+    [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kSeeded];
+  }
+
   [self refresh];
   __weak AppDelegate *weak = self;
   self.watchers = [[MDWatchers alloc] initWithStatePath:self.controller.stateFilePath
@@ -64,6 +72,15 @@
 
   [m addItem:[NSMenuItem separatorItem]];
   [m addItemWithTitle:@"Show Log" action:@selector(showLog:) keyEquivalent:@""];
+
+  [m addItem:[NSMenuItem separatorItem]];
+  NSMenuItem *vmLogin = [m addItemWithTitle:@"Start Docker at Login"
+                                     action:@selector(toggleVMLogin:) keyEquivalent:@""];
+  vmLogin.state = [[self ctlLoginStatus] isEqualToString:@"on"] ? NSOnState : NSOffState;
+  NSMenuItem *appLogin = [m addItemWithTitle:@"Open at Login"
+                                      action:@selector(toggleAppLogin:) keyEquivalent:@""];
+  appLogin.state = [MDLoginItem isEnabled] ? NSOnState : NSOffState;
+
   [m addItem:[NSMenuItem separatorItem]];
   [m addItemWithTitle:@"Quit Container Tools for Mavericks" action:@selector(terminate:) keyEquivalent:@"q"];
 
@@ -86,6 +103,25 @@
   NSString *log = [NSHomeDirectory() stringByAppendingPathComponent:
     @"Library/Logs/ModernMavericks/container-tools/bootstrap.log"];
   [[NSWorkspace sharedWorkspace] openFile:log withApplication:@"Console"];
+}
+
+- (NSString *)ctlLoginStatus {
+  NSTask *t = [[NSTask alloc] init];
+  t.launchPath = @"/usr/local/bin/docker-machine-ctl";
+  t.arguments = @[@"login-status"];
+  NSPipe *p = [NSPipe pipe]; t.standardOutput = p; t.standardError = [NSPipe pipe];
+  @try { [t launch]; } @catch (NSException *e) { return @"off"; }
+  NSData *d = [[p fileHandleForReading] readDataToEndOfFile]; [t waitUntilExit];
+  return [[[NSString alloc] initWithData:d encoding:NSUTF8StringEncoding]
+          stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+}
+- (void)toggleVMLogin:(id)s {
+  BOOL on = [[self ctlLoginStatus] isEqualToString:@"on"];
+  [self.controller runVerb:(on ? @"login-off" : @"login-on") completion:^(NSString *o, int c) { [self refresh]; }];
+}
+- (void)toggleAppLogin:(id)s {
+  [MDLoginItem setEnabled:![MDLoginItem isEnabled]];
+  [self rebuildMenu];
 }
 
 - (NSImage *)iconForState:(NSString *)state {
