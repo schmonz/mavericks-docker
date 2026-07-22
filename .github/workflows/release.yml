@@ -90,6 +90,11 @@ jobs:
           if otool -L "$BIN" | tail -n +2 | grep -iq docker; then
             echo "::error::updater links a docker product (self-update circularity)"; exit 1; fi
 
+      - name: Build the menu-bar app
+        run: |
+          cmake -S menubar -B build/menubar -DCMAKE_OBJC_COMPILER=/usr/bin/clang
+          cmake --build build/menubar
+
       # On tags: bundle the packaging inputs into ONE tarball so executable bits (binaries, the .app's
       # Mach-Os, the signer) survive the artifact round-trip -- artifacts otherwise drop file modes.
       - name: Stage + upload packaging inputs
@@ -102,6 +107,7 @@ jobs:
           cp build-cross/docker-machine/docker-machine stage/docker-machine
           cp build-cross/lazydocker/lazydocker        stage/lazydocker
           cp -R build/updater/ContainerToolsUpdater.app stage/ContainerToolsUpdater.app
+          cp -R build/menubar/DockerMenu.app stage/DockerMenu.app
           find stage -name '._*' -delete 2>/dev/null || true
           tar -C stage -czf packaging-inputs.tgz .
       - name: Upload packaging inputs (tags only)
@@ -166,6 +172,7 @@ jobs:
             --bootstrap payload/docker-machine-bootstrap \
             --common payload/docker-machine-common.sh \
             --ctl payload/docker-machine-ctl \
+            --menubar-app in/DockerMenu.app \
             --launch-agent payload/dev.modernmavericks.container-tools-machine.plist \
             --resources cmake/resources --welcome Welcome.html
 

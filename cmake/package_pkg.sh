@@ -9,13 +9,13 @@
 #
 # Usage:
 #   package_pkg.sh --out PKG --version V --docker BIN --compose BIN --machine BIN --iso ISO \
-#     --updater-app APP.app --bootstrap BIN --common FILE --ctl BIN --launch-agent PLIST \
-#     [--msc-scripts DIR] [--resources DIR --welcome FILE]
+#     --updater-app APP.app --bootstrap BIN --common FILE --ctl BIN --menubar-app APP.app \
+#     --launch-agent PLIST [--msc-scripts DIR] [--resources DIR --welcome FILE]
 set -eu
 export COPYFILE_DISABLE=1
 
 OUT=""; VER=""; DOCKER=""; COMPOSE=""; MACHINE=""; LAZY=""; ISO=""; UPD_APP=""; DOCKED=""; SYNC=""
-BOOT=""; COMMON=""; CTL=""; LAUNCHAGENT=""
+BOOT=""; COMMON=""; CTL=""; MENUBAR=""; LAUNCHAGENT=""
 MSC="${MSC_SCRIPTS:-}"; RES=""; WELCOME=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -32,6 +32,7 @@ while [ $# -gt 0 ]; do
     --bootstrap) BOOT="$2"; shift 2;;
     --common) COMMON="$2"; shift 2;;
     --ctl) CTL="$2"; shift 2;;
+    --menubar-app) MENUBAR="$2"; shift 2;;
     --launch-agent) LAUNCHAGENT="$2"; shift 2;;
     --msc-scripts) MSC="$2"; shift 2;;
     --resources) RES="$2"; shift 2;;
@@ -41,11 +42,12 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$OUT" ] && [ -n "$VER" ] && [ -n "$DOCKER" ] && [ -n "$COMPOSE" ] && [ -n "$MACHINE" ] \
   && [ -n "$LAZY" ] && [ -n "$ISO" ] && [ -n "$UPD_APP" ] && [ -n "$DOCKED" ] && [ -n "$SYNC" ] \
-  && [ -n "$BOOT" ] && [ -n "$COMMON" ] && [ -n "$CTL" ] && [ -n "$LAUNCHAGENT" ] \
-  || { echo "package_pkg: need --out --version --docker --compose --machine --lazydocker --iso --updater-app --docked --sync-helper --bootstrap --common --ctl --launch-agent" >&2; exit 2; }
+  && [ -n "$BOOT" ] && [ -n "$COMMON" ] && [ -n "$CTL" ] && [ -n "$MENUBAR" ] && [ -n "$LAUNCHAGENT" ] \
+  || { echo "package_pkg: need --out --version --docker --compose --machine --lazydocker --iso --updater-app --docked --sync-helper --bootstrap --common --ctl --menubar-app --launch-agent" >&2; exit 2; }
 [ -n "$MSC" ] || { echo "package_pkg: MSC_SCRIPTS unset (install mavericks-shared-cmake, or pass --msc-scripts)" >&2; exit 2; }
 for f in "$DOCKER" "$COMPOSE" "$MACHINE" "$LAZY" "$ISO" "$DOCKED" "$SYNC" "$BOOT" "$COMMON" "$CTL" "$LAUNCHAGENT"; do [ -f "$f" ] || { echo "package_pkg: missing input: $f" >&2; exit 1; }; done
 [ -d "$UPD_APP" ] || { echo "package_pkg: no updater .app: $UPD_APP" >&2; exit 1; }
+[ -d "$MENUBAR" ] || { echo "package_pkg: no menubar .app: $MENUBAR" >&2; exit 1; }
 for h in stage_updater.sh set_install_floor.sh; do
   [ -f "$MSC/$h" ] || { echo "package_pkg: shared helper missing: $MSC/$h" >&2; exit 1; }
 done
@@ -73,6 +75,8 @@ install -m 0644 "$COMMON" "$stage/usr/local/libexec/modernmavericks/docker/docke
 install -m 0755 "$COMPOSE" "$stage/usr/local/lib/docker/cli-plugins/docker-compose"
 ln -s ../lib/docker/cli-plugins/docker-compose "$stage/usr/local/bin/docker-compose"
 install -m 0644 "$ISO"    "$stage/usr/local/share/modernmavericks/container-tools/boot2docker.iso"
+mkdir -p "$stage/Applications"
+cp -R "$MENUBAR" "$stage/Applications/Container Tools for Mavericks.app"
 
 # Optional VM auto-start: a per-user LaunchAgent (ships Disabled) driving the bootstrap helper.
 # Off by default -- the user turns it on with `launchctl load -w`. root:wheel 0644 so launchd accepts it.
@@ -82,6 +86,19 @@ install -m 0644 "$LAUNCHAGENT" "$stage/Library/LaunchAgents/dev.modernmavericks.
 # --- updater app + LaunchAgent + postinstall (shared, hoisted) ---
 sh "$MSC/stage_updater.sh" --stage "$stage" --app "$UPD_APP" --app-dir "$UPD_APPDIR" \
   --agent-label "$AGENT_LABEL" --scripts-out "$scripts"
+
+# stage_updater.sh's generated postinstall ends with `exit 0`; drop a trailing standalone
+# one so the launch below runs, then re-add exit 0 at the very end. Robust if it changes.
+[ -f "$scripts/postinstall" ] || printf '#!/bin/sh\n' > "$scripts/postinstall"
+sed -i '' -e '${/^[[:space:]]*exit 0[[:space:]]*$/d;}' "$scripts/postinstall"
+cat >> "$scripts/postinstall" <<'POST'
+# Launch the menu-bar app once, as the console user, so it registers its Login Item
+# and appears immediately (installer runs as root).
+_uid=$(stat -f %u /dev/console 2>/dev/null)
+[ -n "$_uid" ] && launchctl asuser "$_uid" open -a "/Applications/Container Tools for Mavericks.app" >/dev/null 2>&1 || true
+exit 0
+POST
+chmod +x "$scripts/postinstall"
 
 # --- flat component pkg over the whole payload, with the agent-loading postinstall ---
 # Strip AppleDouble sidecars copied in from the (NFS) source tree. NOTE: macOS 26 stamps an
