@@ -85,9 +85,24 @@ EOF
   teardown
 }
 
+case_packaging() {
+  grep -q -- '--common' "$ROOT/cmake/package_pkg.sh" || fail "package_pkg.sh needs --common"
+  grep -q -- '--ctl' "$ROOT/cmake/package_pkg.sh" || fail "package_pkg.sh needs --ctl"
+  grep -q 'usr/local/libexec/modernmavericks/docker/docker-machine-common.sh' "$ROOT/cmake/package_pkg.sh" \
+    || fail "package_pkg.sh must install docker-machine-common.sh"
+  grep -q 'usr/local/bin/docker-machine-ctl' "$ROOT/cmake/package_pkg.sh" \
+    || fail "package_pkg.sh must install docker-machine-ctl"
+  grep -q -- '--common payload/docker-machine-common.sh' "$ROOT/.github/workflows/release.yml" \
+    || fail "release.yml must pass --common"
+  grep -q -- '--ctl payload/docker-machine-ctl' "$ROOT/.github/workflows/release.yml" \
+    || fail "release.yml must pass --ctl"
+  echo "  ctl-packaging OK"
+}
+
 case_status
 case_start_stop
 case_login
 case_vmxpid
 case_setup
+case_packaging
 echo "docker_ctl_test: OK"
