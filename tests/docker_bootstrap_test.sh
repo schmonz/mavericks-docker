@@ -116,4 +116,38 @@ EOF
 
 case_create
 case_start
+
+# --- Case: running -> create context from docker-machine env, then use it ---
+case_context_create() {
+  setup; make_dm; make_docker
+  MVD_TEST_STATUS=Running sh "$BOOT" || fail "running path should exit 0"
+  grep -q 'context create mavericks' "$DOCKER_LOG" || fail "expected context create"
+  grep -q 'host=tcp://192.168.237.131:2376' "$DOCKER_LOG" || fail "context must carry env host"
+  grep -q 'ca=.*/ca.pem' "$DOCKER_LOG" || fail "context must carry ca cert path"
+  grep -q 'context use mavericks' "$DOCKER_LOG" || fail "expected context use"
+  teardown
+}
+
+# --- Case: context exists with same host -> update skipped, still 'use' ---
+case_context_current() {
+  setup; make_dm
+  : > "$WORK/ctx-exists"
+  cat > "$BIN/docker" <<EOF
+#!/bin/sh
+printf '%s\n' "\$*" >> "$DOCKER_LOG"
+case "\$1 \$2" in
+  "context inspect")
+    # --format present => return current host (matches env); else exit 0
+    case "\$*" in *Endpoints*) echo 'tcp://192.168.237.131:2376' ;; esac ;;
+esac
+EOF
+  chmod +x "$BIN/docker"
+  MVD_TEST_STATUS=Running sh "$BOOT" || fail "should exit 0"
+  grep -q 'context update' "$DOCKER_LOG" && fail "must not update when host unchanged"
+  grep -q 'context use mavericks' "$DOCKER_LOG" || fail "expected context use"
+  teardown
+}
+
+case_context_create
+case_context_current
 echo "docker_bootstrap_test: OK"
