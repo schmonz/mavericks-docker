@@ -2,7 +2,7 @@
 # docker-machine-common.sh — shared constants + helpers for docker-machine-bootstrap
 # and docker-machine-ctl. SOURCED, not executed. Honors the MAVERICKS_DOCKER_* test seams.
 
-MACHINE=default
+MACHINE=container-tools
 CONTEXT=mavericks
 ISO=${MAVERICKS_DOCKER_ISO:-/usr/local/share/modernmavericks/container-tools/boot2docker.iso}
 LOG=${MAVERICKS_DOCKER_LOG:-$HOME/Library/Logs/ModernMavericks/container-tools/bootstrap.log}
@@ -12,6 +12,10 @@ LOCK="$STATE_DIR/creating.lock"
 PROFILES=${MAVERICKS_DOCKER_PROFILES:-$HOME/.bash_profile $HOME/.profile $HOME/.zshrc $HOME/.bashrc}
 AGENT_LABEL=dev.modernmavericks.container-tools-machine
 AGENT_PLIST=/Library/LaunchAgents/$AGENT_LABEL.plist
+MACHDIR=${MAVERICKS_DOCKER_MACHDIR:-$HOME/.docker/machine/machines}
+
+# True if a legacy 'default' machine dir exists (pre-rename installs).
+legacy_default_exists() { [ -d "$MACHDIR/default" ]; }
 
 log() {
   mkdir -p "$(dirname "$LOG")" 2>/dev/null || true

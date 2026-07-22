@@ -47,9 +47,9 @@ case_status() {
 case_start_stop() {
   setup; stub_dm Running
   sh "$CTL" start >/dev/null || fail "start exit 0"
-  grep -q '^start default' "$DM_LOG" || fail "start calls docker-machine start default"
+  grep -q '^start container-tools' "$DM_LOG" || fail "start calls docker-machine start container-tools"
   sh "$CTL" stop >/dev/null || fail "stop exit 0"
-  grep -q '^stop default' "$DM_LOG" || fail "stop calls docker-machine stop default"
+  grep -q '^stop container-tools' "$DM_LOG" || fail "stop calls docker-machine stop container-tools"
   teardown
 }
 case_login() {

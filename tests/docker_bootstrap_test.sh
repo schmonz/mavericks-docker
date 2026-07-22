@@ -90,7 +90,7 @@ EOF
   chmod +x "$BIN/docker-machine"
   sh "$BOOT" || fail "create path should exit 0"
   grep -q 'create -d vmwarefusion' "$DM_LOG" || fail "expected docker-machine create"
-  grep -q "default" "$DM_LOG" || fail "create should target 'default'"
+  grep -q "container-tools" "$DM_LOG" || fail "create should target 'container-tools'"
   [ -f "$WORK/started" ] || fail "expected start after create"
   teardown
 }
