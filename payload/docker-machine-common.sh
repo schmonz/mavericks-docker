@@ -58,6 +58,8 @@ status_word() {
 }
 
 write_state() {
+  # Atomic: write a temp then rename, so a reader (or the menu-bar app's kqueue watch)
+  # never sees a truncated/empty file mid-write. The watcher re-arms on the rename.
   mkdir -p "$STATE_DIR" 2>/dev/null || true
-  printf '%s\n' "$1" > "$STATE_FILE" 2>/dev/null || true
+  printf '%s\n' "$1" > "$STATE_FILE.tmp" 2>/dev/null && mv -f "$STATE_FILE.tmp" "$STATE_FILE" 2>/dev/null || true
 }

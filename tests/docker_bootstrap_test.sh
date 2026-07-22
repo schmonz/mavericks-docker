@@ -260,4 +260,26 @@ case_writes_state() {
 }
 
 case_writes_state
+
+# --- Case: a commented-out env line must NOT trigger the override warning ---
+case_env_commented() {
+  setup; make_dm; make_docker
+  printf '%s\n' '# eval "$(docker-machine env default)"' > "$HOME/.bash_profile"
+  MAVERICKS_DOCKER_TEST_STATUS=Running sh "$BOOT" || fail "should exit 0"
+  grep -q 'overrides' "$OSA_LOG" && fail "must not warn on a commented-out line"
+  teardown
+}
+
+# --- Case: a state dir containing spaces works end to end (quoting) ---
+case_space_in_state_dir() {
+  setup; make_dm; make_docker
+  export MAVERICKS_DOCKER_STATE_DIR="$WORK/state dir with spaces"
+  MAVERICKS_DOCKER_TEST_STATUS=Running sh "$BOOT" || fail "should exit 0 with a spaced state dir"
+  [ "$(cat "$MAVERICKS_DOCKER_STATE_DIR/state" 2>/dev/null)" = running ] \
+    || fail "state must be written into the spaced state dir"
+  teardown
+}
+
+case_env_commented
+case_space_in_state_dir
 echo "docker_bootstrap_test: OK"

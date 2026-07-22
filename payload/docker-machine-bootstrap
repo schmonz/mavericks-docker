@@ -9,7 +9,9 @@ SELF=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
 
 create_machine() {
   mkdir -p "$STATE_DIR" 2>/dev/null || true
-  mkdir "$LOCK" 2>/dev/null || { log "create lock held; skipping create"; return 0; }
+  # Atomic acquire. Returns 1 if another run holds the lock (TOCTOU-safe vs the
+  # create_in_progress pre-check) so main can bail instead of touching a half-created VM.
+  mkdir "$LOCK" 2>/dev/null || { log "create lock held; skipping create"; return 1; }
   log "creating machine 'default'"
   if [ "${MAVERICKS_DOCKER_NONINTERACTIVE:-}" = 1 ]; then
     docker-machine create -d vmwarefusion --vmwarefusion-boot2docker-url "$ISO" "$MACHINE" >>"$LOG" 2>&1
@@ -20,6 +22,7 @@ create_machine() {
     osascript -e "tell application \"Terminal\" to do script \"$_cmd\"" >/dev/null 2>&1 || true
     osascript -e 'tell application "Terminal" to activate' >/dev/null 2>&1 || true
   fi
+  return 0
 }
 
 sync_context() {
@@ -44,7 +47,7 @@ sync_context() {
 warn_env_override() {
   for _p in $PROFILES; do
     [ -f "$_p" ] || continue
-    if grep -Eq 'docker-machine env|DOCKER_HOST=' "$_p" 2>/dev/null; then
+    if grep -Ev '^[[:space:]]*#' "$_p" 2>/dev/null | grep -Eq 'docker-machine env|DOCKER_HOST='; then
       notify envoverride "Container Tools for Mavericks" \
         "A DOCKER_HOST line in $(basename "$_p") overrides the managed setup; remove it to use Container Tools for Mavericks."
       return 0
@@ -66,7 +69,7 @@ main() {
   fi
   _status=$(machine_status)
   if [ -z "$_status" ]; then
-    create_machine
+    if ! create_machine; then write_state creating; exit 0; fi
     [ "${MAVERICKS_DOCKER_NONINTERACTIVE:-}" = 1 ] || { write_state "$(status_word)"; exit 0; }
     _status=$(machine_status)
   fi
