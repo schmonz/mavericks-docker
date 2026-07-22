@@ -15,17 +15,19 @@
     LSSharedFileListItemRef it = (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items, i);
     CFURLRef u = NULL;
     if (LSSharedFileListItemResolve(it, 0, &u, NULL) == noErr && u) {
-      if ([(__bridge NSURL *)u isEqual:want]) { found = it; CFRelease(u); break; }
+      if ([(__bridge NSURL *)u isEqual:want]) { found = (LSSharedFileListItemRef)CFRetain(it); CFRelease(u); break; }
       CFRelease(u);
     }
   }
   if (items) CFRelease(items);
-  return found; // borrowed from the snapshot; valid until list changes
+  return found; // +1 retained (or NULL); CALLER MUST CFRelease
 }
 
 + (BOOL)isEnabled {
   LSSharedFileListRef list = LSSharedFileListCreate(NULL, kLSSharedFileListSessionLoginItems, NULL);
-  BOOL on = ([self findItemInList:list] != NULL);
+  LSSharedFileListItemRef found = [self findItemInList:list];
+  BOOL on = (found != NULL);
+  if (found) CFRelease(found);
   if (list) CFRelease(list);
   return on;
 }
@@ -41,6 +43,7 @@
   } else if (!enabled && existing) {
     LSSharedFileListItemRemove(list, existing);
   }
+  if (existing) CFRelease(existing);
   CFRelease(list);
 }
 
