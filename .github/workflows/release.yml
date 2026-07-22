@@ -172,6 +172,7 @@ jobs:
             --bootstrap payload/docker-machine-bootstrap \
             --common payload/docker-machine-common.sh \
             --ctl payload/docker-machine-ctl \
+            --migrate payload/docker-machine-migrate \
             --menubar-app in/DockerMenu.app \
             --launch-agent payload/dev.modernmavericks.container-tools-machine.plist \
             --resources cmake/resources --welcome Welcome.html

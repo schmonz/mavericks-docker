@@ -9,13 +9,13 @@
 #
 # Usage:
 #   package_pkg.sh --out PKG --version V --docker BIN --compose BIN --machine BIN --iso ISO \
-#     --updater-app APP.app --bootstrap BIN --common FILE --ctl BIN --menubar-app APP.app \
+#     --updater-app APP.app --bootstrap BIN --common FILE --ctl BIN --migrate BIN --menubar-app APP.app \
 #     --launch-agent PLIST [--msc-scripts DIR] [--resources DIR --welcome FILE]
 set -eu
 export COPYFILE_DISABLE=1
 
 OUT=""; VER=""; DOCKER=""; COMPOSE=""; MACHINE=""; LAZY=""; ISO=""; UPD_APP=""; DOCKED=""; SYNC=""
-BOOT=""; COMMON=""; CTL=""; MENUBAR=""; LAUNCHAGENT=""
+BOOT=""; COMMON=""; CTL=""; MIGRATE=""; MENUBAR=""; LAUNCHAGENT=""
 MSC="${MSC_SCRIPTS:-}"; RES=""; WELCOME=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -32,6 +32,7 @@ while [ $# -gt 0 ]; do
     --bootstrap) BOOT="$2"; shift 2;;
     --common) COMMON="$2"; shift 2;;
     --ctl) CTL="$2"; shift 2;;
+    --migrate) MIGRATE="$2"; shift 2;;
     --menubar-app) MENUBAR="$2"; shift 2;;
     --launch-agent) LAUNCHAGENT="$2"; shift 2;;
     --msc-scripts) MSC="$2"; shift 2;;
@@ -42,10 +43,10 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$OUT" ] && [ -n "$VER" ] && [ -n "$DOCKER" ] && [ -n "$COMPOSE" ] && [ -n "$MACHINE" ] \
   && [ -n "$LAZY" ] && [ -n "$ISO" ] && [ -n "$UPD_APP" ] && [ -n "$DOCKED" ] && [ -n "$SYNC" ] \
-  && [ -n "$BOOT" ] && [ -n "$COMMON" ] && [ -n "$CTL" ] && [ -n "$MENUBAR" ] && [ -n "$LAUNCHAGENT" ] \
-  || { echo "package_pkg: need --out --version --docker --compose --machine --lazydocker --iso --updater-app --docked --sync-helper --bootstrap --common --ctl --menubar-app --launch-agent" >&2; exit 2; }
+  && [ -n "$BOOT" ] && [ -n "$COMMON" ] && [ -n "$CTL" ] && [ -n "$MIGRATE" ] && [ -n "$MENUBAR" ] && [ -n "$LAUNCHAGENT" ] \
+  || { echo "package_pkg: need --out --version --docker --compose --machine --lazydocker --iso --updater-app --docked --sync-helper --bootstrap --common --ctl --migrate --menubar-app --launch-agent" >&2; exit 2; }
 [ -n "$MSC" ] || { echo "package_pkg: MSC_SCRIPTS unset (install mavericks-shared-cmake, or pass --msc-scripts)" >&2; exit 2; }
-for f in "$DOCKER" "$COMPOSE" "$MACHINE" "$LAZY" "$ISO" "$DOCKED" "$SYNC" "$BOOT" "$COMMON" "$CTL" "$LAUNCHAGENT"; do [ -f "$f" ] || { echo "package_pkg: missing input: $f" >&2; exit 1; }; done
+for f in "$DOCKER" "$COMPOSE" "$MACHINE" "$LAZY" "$ISO" "$DOCKED" "$SYNC" "$BOOT" "$COMMON" "$CTL" "$MIGRATE" "$LAUNCHAGENT"; do [ -f "$f" ] || { echo "package_pkg: missing input: $f" >&2; exit 1; }; done
 [ -d "$UPD_APP" ] || { echo "package_pkg: no updater .app: $UPD_APP" >&2; exit 1; }
 [ -d "$MENUBAR" ] || { echo "package_pkg: no menubar .app: $MENUBAR" >&2; exit 1; }
 for h in stage_updater.sh set_install_floor.sh; do
@@ -69,6 +70,7 @@ install -m 0755 "$DOCKED"  "$stage/usr/local/bin/docked"
 install -m 0755 "$SYNC"    "$stage/usr/local/bin/container-tools-sync-image"
 install -m 0755 "$BOOT"    "$stage/usr/local/bin/docker-machine-bootstrap"
 install -m 0755 "$CTL"    "$stage/usr/local/bin/docker-machine-ctl"
+install -m 0755 "$MIGRATE" "$stage/usr/local/bin/docker-machine-migrate"
 mkdir -p "$stage/usr/local/libexec/modernmavericks/docker"
 install -m 0644 "$COMMON" "$stage/usr/local/libexec/modernmavericks/docker/docker-machine-common.sh"
 # Compose v2 as a CLI plugin (enables `docker compose`), plus a standalone `docker-compose` symlink.

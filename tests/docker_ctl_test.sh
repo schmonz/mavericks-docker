@@ -96,6 +96,10 @@ case_packaging() {
     || fail "release.yml must pass --common"
   grep -q -- '--ctl payload/docker-machine-ctl' "$ROOT/.github/workflows/release.yml" \
     || fail "release.yml must pass --ctl"
+  grep -q 'usr/local/bin/docker-machine-migrate' "$ROOT/cmake/package_pkg.sh" \
+    || fail "package_pkg.sh must install docker-machine-migrate"
+  grep -q -- '--migrate payload/docker-machine-migrate' "$ROOT/.github/workflows/release.yml" \
+    || fail "release.yml must pass --migrate"
   echo "  ctl-packaging OK"
 }
 
