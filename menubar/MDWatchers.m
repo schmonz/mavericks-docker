@@ -8,6 +8,8 @@
   void (^_onChange)(void);
   dispatch_source_t _fileSrc;   // state file NOTE_WRITE
   dispatch_source_t _procSrc;   // vmx NOTE_EXIT
+  dispatch_source_t _timerSrc;  // slow fallback
+  id _wakeObserver;             // NSWorkspace wake token
   int _fileFd;
 }
 @end
@@ -21,16 +23,26 @@
 
 - (void)start {
   [self armFileWatch];
+  __weak MDWatchers *weak = self;
   // Slow fallback (covers externally-initiated starts when the agent is disabled).
-  dispatch_source_t t = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
-  dispatch_source_set_timer(t, dispatch_time(DISPATCH_TIME_NOW, 60*NSEC_PER_SEC), 60*NSEC_PER_SEC, 5*NSEC_PER_SEC);
-  dispatch_source_set_event_handler(t, ^{ if (self->_onChange) self->_onChange(); });
-  dispatch_resume(t);
+  _timerSrc = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
+  dispatch_source_set_timer(_timerSrc, dispatch_time(DISPATCH_TIME_NOW, 60*NSEC_PER_SEC), 60*NSEC_PER_SEC, 5*NSEC_PER_SEC);
+  dispatch_source_set_event_handler(_timerSrc, ^{ MDWatchers *me = weak; if (me && me->_onChange) me->_onChange(); });
+  dispatch_resume(_timerSrc);
   // Refresh on wake.
-  [[[NSWorkspace sharedWorkspace] notificationCenter] addObserverForName:NSWorkspaceDidWakeNotification
+  _wakeObserver = [[[NSWorkspace sharedWorkspace] notificationCenter]
+      addObserverForName:NSWorkspaceDidWakeNotification
       object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification *n) {
-        if (self->_onChange) self->_onChange();
+        MDWatchers *me = weak; if (me && me->_onChange) me->_onChange();
       }];
+}
+
+- (void)dealloc {
+  if (_fileSrc) dispatch_source_cancel(_fileSrc);
+  if (_procSrc) dispatch_source_cancel(_procSrc);
+  if (_timerSrc) dispatch_source_cancel(_timerSrc);
+  if (_fileFd >= 0) close(_fileFd);
+  if (_wakeObserver) [[[NSWorkspace sharedWorkspace] notificationCenter] removeObserver:_wakeObserver];
 }
 
 - (void)armFileWatch {
