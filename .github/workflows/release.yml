@@ -179,7 +179,7 @@ jobs:
           echo "=== appcast.xml ==="; cat dist/appcast.xml
       - uses: actions/upload-artifact@v7
         with:
-          name: container-tools-pkg
+          name: docker-pkg
           path: |
             dist/*.pkg
             dist/appcast.xml
