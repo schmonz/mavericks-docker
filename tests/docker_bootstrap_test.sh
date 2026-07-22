@@ -17,6 +17,7 @@ setup() {
   export MAVERICKS_DOCKER_NONINTERACTIVE=1
   export MAVERICKS_DOCKER_PROFILES="$HOME/.bash_profile"
   export MAVERICKS_DOCKER_FUSION_PRESENT=1
+  export MAVERICKS_DOCKER_COMMON="$ROOT/payload/docker-machine-common.sh"
   export DM_LOG="$WORK/dm.args"; : > "$DM_LOG"
   export DOCKER_LOG="$WORK/docker.args"; : > "$DOCKER_LOG"
   export OSA_LOG="$WORK/osa.args"; : > "$OSA_LOG"
@@ -248,4 +249,15 @@ case_packaging() {
 }
 
 case_packaging
+
+# --- Case: a running reconcile announces state ---
+case_writes_state() {
+  setup; make_dm; make_docker
+  MAVERICKS_DOCKER_TEST_STATUS=Running sh "$BOOT" || fail "should exit 0"
+  [ "$(cat "$MAVERICKS_DOCKER_STATE_DIR/state" 2>/dev/null)" = running ] \
+    || fail "bootstrap must write 'running' to the state file"
+  teardown
+}
+
+case_writes_state
 echo "docker_bootstrap_test: OK"

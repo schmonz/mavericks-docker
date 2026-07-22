@@ -1,51 +1,11 @@
 #!/bin/sh
 # docker-machine-bootstrap — bring the Docker VM up and keep the docker CLI pointed at it,
 # with no shell wiring. Idempotent; always exits 0 (safe for a LaunchAgent on a timer).
-# Test seams (env; real defaults otherwise): MAVERICKS_DOCKER_ISO MAVERICKS_DOCKER_LOG MAVERICKS_DOCKER_STATE_DIR MAVERICKS_DOCKER_PROFILES
-# MAVERICKS_DOCKER_FUSION_PRESENT MAVERICKS_DOCKER_NONINTERACTIVE
+# Shared constants/helpers live in docker-machine-common.sh (sourced below).
 set -u
 
-MACHINE=default
-CONTEXT=mavericks
 SELF=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
-ISO=${MAVERICKS_DOCKER_ISO:-/usr/local/share/modernmavericks/container-tools/boot2docker.iso}
-LOG=${MAVERICKS_DOCKER_LOG:-$HOME/Library/Logs/container-tools/bootstrap.log}
-STATE_DIR=${MAVERICKS_DOCKER_STATE_DIR:-$HOME/Library/Application Support/container-tools}
-PROFILES=${MAVERICKS_DOCKER_PROFILES:-$HOME/.bash_profile $HOME/.profile $HOME/.zshrc $HOME/.bashrc}
-LOCK="$STATE_DIR/creating.lock"
-
-log() {
-  mkdir -p "$(dirname "$LOG")" 2>/dev/null || true
-  echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG" 2>/dev/null || true
-}
-
-notify() { # key title message  (throttled to once/day per key)
-  mkdir -p "$STATE_DIR" 2>/dev/null || true
-  _stamp="$STATE_DIR/notified-$1"; _today=$(date '+%Y-%m-%d')
-  [ -f "$_stamp" ] && [ "$(cat "$_stamp" 2>/dev/null)" = "$_today" ] && return 0
-  echo "$_today" > "$_stamp" 2>/dev/null || true
-  osascript -e "display notification \"$3\" with title \"$2\"" >/dev/null 2>&1 || true
-}
-
-fusion_present() {
-  [ "${MAVERICKS_DOCKER_FUSION_PRESENT:-}" = 0 ] && return 1
-  [ "${MAVERICKS_DOCKER_FUSION_PRESENT:-}" = 1 ] && return 0
-  [ -d "/Applications/VMware Fusion.app" ] || command -v vmrun >/dev/null 2>&1
-}
-
-machine_status() { docker-machine status "$MACHINE" 2>/dev/null; }
-
-# True while a create is in flight. A lock older than 10 min is stale -> reclaim it.
-create_in_progress() {
-  [ -d "$LOCK" ] || return 1
-  _mt=$(stat -f %m "$LOCK" 2>/dev/null) || return 0
-  if [ $(( $(date +%s) - _mt )) -gt 600 ]; then
-    log "stale create lock; reclaiming"
-    rmdir "$LOCK" 2>/dev/null || true
-    return 1
-  fi
-  return 0
-}
+. "${MAVERICKS_DOCKER_COMMON:-/usr/local/libexec/modernmavericks/docker/docker-machine-common.sh}"
 
 create_machine() {
   mkdir -p "$STATE_DIR" 2>/dev/null || true
@@ -56,8 +16,6 @@ create_machine() {
     rmdir "$LOCK" 2>/dev/null || true
   else
     notify create "Container Tools for Mavericks" "Creating the Docker VM (one-time, ~1-2 min)..."
-    # The Terminal releases the lock and re-runs SELF (to sync the context) only on a
-    # successful create; a failed create leaves the lock for the 10-min stale reclaim.
     _cmd="docker-machine create -d vmwarefusion --vmwarefusion-boot2docker-url '$ISO' $MACHINE && rmdir '$LOCK' && '$SELF'"
     osascript -e "tell application \"Terminal\" to do script \"$_cmd\"" >/dev/null 2>&1 || true
     osascript -e 'tell application "Terminal" to activate' >/dev/null 2>&1 || true
@@ -98,22 +56,24 @@ main() {
   if ! fusion_present; then
     log "VMware Fusion not found; skipping"
     notify fusion "Container Tools for Mavericks" "Install VMware Fusion to run the Docker VM."
+    write_state no-fusion
     exit 0
   fi
   if create_in_progress; then
     log "create already in progress; skipping this run"
+    write_state creating
     exit 0
   fi
   _status=$(machine_status)
   if [ -z "$_status" ]; then
     create_machine
-    # Interactive create runs in a Terminal (chained to re-run SELF); nothing more to do now.
-    [ "${MAVERICKS_DOCKER_NONINTERACTIVE:-}" = 1 ] || exit 0
+    [ "${MAVERICKS_DOCKER_NONINTERACTIVE:-}" = 1 ] || { write_state "$(status_word)"; exit 0; }
     _status=$(machine_status)
   fi
   [ "$_status" = "Running" ] || docker-machine start "$MACHINE" >>"$LOG" 2>&1 || true
   [ "$(machine_status)" = "Running" ] && sync_context
   warn_env_override
+  write_state "$(status_word)"
   exit 0
 }
 
