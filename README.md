@@ -5,32 +5,34 @@ runs in a Linux VM (VMware Fusion 8); docker-machine manages it.
 
 ## Setup
 
-Install VMware Fusion, then create the VM and wire your shell to it:
+Install VMware Fusion, then bring the Docker VM up once:
 
 ```sh
-docker-machine create -d vmwarefusion \
-  --vmwarefusion-boot2docker-url /usr/local/share/modernmavericks/container-tools/boot2docker.iso \
-  default \
-&& if ! grep -q DOCKER ~/.bash_profile 2>/dev/null; then \
-     printf '\neval "$(docker-machine env default)"\n' >> ~/.bash_profile; fi \
-&& eval "$(docker-machine env default)"
+docker-machine-bootstrap
 ```
 
-From then on the VM starts automatically at login. To stop that:
+It creates the VM from the bundled image (first run only, ~1-2 min in a Terminal),
+starts it, and points a `docker` **context** named `mavericks` at it — so `docker`,
+`docker compose`, and `lazydocker` just work in any shell, with no environment
+variables to set. `docked IMAGE CMD` runs a container with `$PWD` at `/work/`.
+
+To start the VM automatically at login:
 
 ```sh
-launchctl unload -w /Library/LaunchAgents/dev.modernmavericks.container-tools-machine.plist
+launchctl load -w /Library/LaunchAgents/dev.modernmavericks.container-tools-machine.plist
 ```
-
-docker, docker compose, and lazydocker then work normally. `docked IMAGE CMD`
-runs a container with `$PWD` at `/work/`.
 
 ## Updates
 
-The package updates itself, and after each update offers to roll your VM host(s)
-onto the new image — nothing to run by hand.
+The package updates itself, and after each update offers to roll your VM onto the
+new image — nothing to run by hand.
 
 ## Notes
 
-- The VM is named "default" in VMware Fusion; adjust CPU/RAM in its Settings.
+- If `docker` says "cannot connect," the VM is stopped — run `docker-machine-bootstrap`
+  (or start it from the menu bar) and retry.
+- Migrating from an older setup? Remove any `eval "$(docker-machine env …)"` or
+  hardcoded `DOCKER_HOST=` line from your shell profile — it overrides the managed
+  context. The bootstrap will notify you if it finds one.
+- The VM appears in VMware Fusion as "default"; adjust CPU/RAM in its Settings.
 - boot2docker.iso: https://github.com/dragonflylee/boot2docker/
