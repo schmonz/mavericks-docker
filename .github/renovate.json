@@ -6,14 +6,18 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["^components/[^/]+/version$"],
+      "managerFilePatterns": [
+        "/^components/[^/]+/version$/"
+      ],
       "matchStrings": ["REPO=(?<packageName>\\S+)\\.git\\nREF=(?<currentValue>\\S+)"],
       "datasourceTemplate": "git-refs",
       "versioningTemplate": "semver"
     },
     {
       "customType": "regex",
-      "fileMatch": ["^\\.github/.+\\.ya?ml$"],
+      "managerFilePatterns": [
+        "/^\\.github/.+\\.ya?ml$/"
+      ],
       "matchStrings": ["(?<currentDigest>[0-9a-f]{40})\\s*#\\s*mavericks-shared-cmake"],
       "currentValueTemplate": "main",
       "depNameTemplate": "mavericks-shared-cmake",
